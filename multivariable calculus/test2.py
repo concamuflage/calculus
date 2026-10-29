@@ -377,100 +377,83 @@ fig.suptitle(
     fontsize=14, y=0.98
 )
 
-# Separate the local error added by each step from the cumulative endpoint
-# error: 0.09 from x plus 0.09 from y gives 0.18 in the original tangent plane.
+# Group the color key by the step that introduces each error. For example,
+# purple is the first-step gap; yellow is the extra gap from the second step.
 error_legend_ax = fig.add_axes([0.52, 0.04, 0.23, 0.85])
-error_legend_ax.set_axis_off()
-error_legend_ax.set_navigate(False)
-error_legend_ax.plot([0,0], [0,1], color="lightgray", lw=1,
-                     transform=error_legend_ax.transAxes)
-error_legend_ax.text(0.06, 0.99, "Derivatives, vectors and errors", fontsize=14, weight="bold",
-                     va="top", transform=error_legend_ax.transAxes)
-# Compare y-changes: dashed green=-0.3, blue=-0.21, so their difference is +0.09.
-# The second-step error is additional to the first-step gap of 0.09.
-# Identify arrows by solid/dashed style, e.g. the dashed purple copy matches
-# the solid purple arrow; step names describe the calculations themselves.
-error_sections = [
-    (0.93, "black", "Partial derivatives",
-     rf"$f_x(x,y)=2x,\quad f_x({a:g},{b:g})={fx:g}$" "\n"
-     rf"$f_y(x,y)=2y,\quad f_y({a:g},{b:g})={fy:g}$"),
-    (0.81, "forestgreen", "Tangent-plane x-change\n(predicted x-change)",
-     f"L({x1:g},{b:g}) − L({a:g},{b:g})\n"
-     f"= {step_z:g} − {fa:g} = {fx*dx:+g}"),
-    (0.66, "purple", "Solid purple: x-step error",
-     f"At ({x1:g},{b:g}): surface − tangent plane\n"
-     f"= {first_true_z:g} − {step_z:g} = {first_step_error:g}\n"
-     "Solid purple: downward error correction."),
-    (0.51, "blue", "Blue: actual surface y-change",
-     f"f({x1:g},{y1:g}) − f({x1:g},{b:g})\n"
-     f"= {true_z:g} − {first_true_z:g} = {second_true_change:g}\n"
-     "Downward: the actual height change."),
-    (0.36, "gold", "Yellow: added y-step error",
-     "Blue y-change − dashed green y-change\n"
-     f"= ({second_true_change:g}) − ({fy*dy:g}) = {second_step_error:g}\n"
-     "Yellow arrow: downward error correction."),
-    (0.21, "red", "Red: total downward error correction",
-     f"{first_step_error:g} + {second_step_error:g} = {step_error:g}\n"
-     f"At ({x1:g},{y1:g}): f − L = {true_z:g} − {approx_z:g} = {step_error:g}"),
-    (0.095, "deeppink", "Pink numbers",
-     "Pink numbers indicate the height\nat the critical points."),
-]
-for section_y, section_color, section_title, section_body in error_sections:
-    error_legend_ax.plot([0.055,0.12], [section_y-0.011,section_y-0.011],
-                         color=section_color, lw=2.2,
-                         transform=error_legend_ax.transAxes)
-    error_legend_ax.text(0.15, section_y, section_title, color=section_color,
-                         fontsize=11, weight="bold", va="top",
-                         transform=error_legend_ax.transAxes)
-    # Reserve a second title line for the predicted x-change heading.
-    body_offset = 0.065 if "\n" in section_title else 0.04
-    error_legend_ax.text(0.06, section_y-body_offset, section_body, fontsize=10.5,
-                         va="top", linespacing=1.5, transform=error_legend_ax.transAxes)
-
-# Explain the transported prediction separately from the unchanged plane L.
-# The 0.59 reference includes the first error, whereas L(x1,y1) remains 0.5.
 construction_legend_ax = fig.add_axes([0.765, 0.04, 0.225, 0.85])
-construction_legend_ax.set_axis_off()
-construction_legend_ax.set_navigate(False)
-construction_legend_ax.plot([0,0], [0,1], color="lightgray", lw=1,
-                            transform=construction_legend_ax.transAxes)
-construction_legend_ax.text(0.06, 0.99, "Y-step construction", fontsize=14, weight="bold",
-                            va="top", transform=construction_legend_ax.transAxes)
-construction_sections = [
-    (0.93, "forestgreen", "Dashed green prediction",
-     f"Same y/z cross-section: x = {x1:g}\n"
-     f"Start at the actual intermediate height: {first_true_z:g}\n"
-     f"Apply the predicted y-change: {fy*dy:g}\n"
-     f"Predicted end = {first_true_z:g} + ({fy*dy:g})\n"
-     f"                      = {y_prediction_from_actual:g}"),
-    (0.72, "gold", "Yellow: additional y-step error",
-     f"Actual endpoint height: {true_z:g}\n"
-     f"Transported predicted height: {y_prediction_from_actual:g}\n"
-     f"Y-step error = {true_z:g} − {y_prediction_from_actual:g}\n"
-     f"                  = {second_step_error:g} (downward)"),
-    (0.51, "purple", "Dashed purple: x-step error copy",
-     f"{y_prediction_from_actual:g} → {approx_z:g}: x-step error {first_step_error:g}\n"
-     "Downward, matching the solid purple arrow.\n"
-     f"Purple + yellow = {first_step_error:g} + {second_step_error:g} = {step_error:g}"),
-    (0.32, "red", "Red: total error",
-     f"{true_z:g} → {approx_z:g}: downward correction\n"
-     f"Total magnitude = {step_error:g}\n"
-     f"Purple + yellow = {first_step_error:g} + {second_step_error:g}"),
-    (0.13, "black", "Black dashed guides",
-     "Transfer the predicted green change\nto the actual intermediate surface height.\n"
-     "The diagonal guide has the tangent\nslope, not the curved surface's profile."),
+
+# Keep calculations out of the color key; describe what each visible line
+# connects and what its direction means in the current construction.
+error_sections = [
+    (0.88, "forestgreen", "Solid green: predicted rise", "-",
+     "The height increase predicted by the\n"
+     "tangent plane during the first x-step."),
+    (0.69, "purple", "Solid purple: first-step error", "-",
+     "The gap between the curved surface\n"
+     "and the tangent prediction after the\n"
+     "x-step. The arrow points downward\n"
+     "from the surface to the prediction."),
+    (0.45, "darkblue", "Dark blue: tangent-plane path", "-",
+     "Sloping edges follow the tangent plane.\n"
+     "The first edge shows the predicted rise\n"
+     "as x changes; the next shows the\n"
+     "predicted drop as y changes."),
+    (0.21, "forestgreen", "Green arc: starting slope", "-",
+     "The arc marks the inclination of the\n"
+     "tangent plane in the x direction\n"
+     "at the starting point."),
 ]
-for section_y, section_color, section_title, section_body in construction_sections:
-    construction_legend_ax.plot([0.055,0.12], [section_y-0.011,section_y-0.011],
-                                color=section_color, lw=2.2,
-                                ls="--" if section_color in ("black", "forestgreen", "purple") else "-",
-                                transform=construction_legend_ax.transAxes)
-    construction_legend_ax.text(0.15, section_y, section_title, color=section_color,
-                                fontsize=11, weight="bold", va="top",
-                                transform=construction_legend_ax.transAxes)
-    construction_legend_ax.text(0.06, section_y-0.04, section_body, fontsize=10.5,
-                                va="top", linespacing=1.5,
-                                transform=construction_legend_ax.transAxes)
+construction_sections = [
+    (0.90, "blue", "Blue: actual second-step drop", "-",
+     "The surface height drops from the\n"
+     "intermediate point to the endpoint\n"
+     "during the y-step."),
+    (0.75, "forestgreen", "Dashed green: predicted drop", "--",
+     "The tangent plane's predicted y-drop,\n"
+     "shifted to start at the actual height\n"
+     "reached after the first step."),
+    (0.60, "gold", "Yellow: second-step error", "-",
+     "The extra gap introduced by the y-step.\n"
+     "It points down from the actual endpoint\n"
+     "to the shifted prediction."),
+    (0.45, "purple", "Dashed purple: first error carried", "--",
+     "A copy of the first-step error at the\n"
+     "endpoint. It connects the shifted\n"
+     "prediction to the original tangent plane."),
+    (0.30, "red", "Red: combined error", "-",
+     "The full gap from the actual endpoint\n"
+     "down to the original tangent plane.\n"
+     "It includes both steps' errors."),
+    (0.15, "black", "Black dashed: alignment guides", "--",
+     "Vertical guides align points with the base.\n"
+     "Other guides connect reference heights\n"
+     "and show how the prediction is shifted."),
+]
+for legend_ax, heading, sections in [
+    (error_legend_ax, "First step error", error_sections),
+    (construction_legend_ax, "Second step error", construction_sections),
+]:
+    legend_ax.set_axis_off()
+    legend_ax.set_navigate(False)
+    legend_ax.plot([0, 0], [0, 1], color="lightgray", lw=1,
+                   transform=legend_ax.transAxes)
+    legend_ax.text(0.06, 0.99, heading, fontsize=14, weight="bold",
+                   va="top", transform=legend_ax.transAxes)
+    for section_y, color, title, line_style, body in sections:
+        # Match the actual arrow style, e.g. the carried purple error is dashed.
+        legend_ax.plot([0.055, 0.12], [section_y-0.011, section_y-0.011],
+                       color=color, lw=2.2, ls=line_style,
+                       transform=legend_ax.transAxes)
+        legend_ax.text(0.15, section_y, title, color=color, fontsize=11,
+                       weight="bold", va="top", transform=legend_ax.transAxes)
+        legend_ax.text(0.06, section_y-0.04, body, fontsize=10.5,
+                       va="top", linespacing=1.5, transform=legend_ax.transAxes)
+
+# Heights remain labeled on the graph; this note explains the pink labels
+# without repeating the arithmetic removed from the color explanations.
+error_legend_ax.text(0.06, 0.04, "Pink numbers label point heights.",
+                     color="deeppink", fontsize=10.5, va="top",
+                     transform=error_legend_ax.transAxes)
 
 # Embed the graph in Tkinter
 canvas = FigureCanvasTkAgg(fig, master=root)
